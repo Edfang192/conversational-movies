@@ -17,7 +17,7 @@ from tqdm.auto import tqdm as tqdm_pandas
 
 from indexing import load_index
 
-
+#check for remarks(good! bad!)
 def entities_in_utterance(utterance):
     """ extract entities from the utterance """
     if 'segments' not in utterance:
@@ -34,7 +34,7 @@ def entities_in_utterance(utterance):
                 ents.add(segment['text'])
     return list(ents)
 
-
+#unerstand if the text is positive or negative by its utterance.
 def get_context(dialog, utterance):
     ''' append previous turn to current utterance to create context '''
     prev_utterance = dialog['utterances'][utterance['index'] - 1]
@@ -42,7 +42,7 @@ def get_context(dialog, utterance):
         return prev_utterance['text'] + ' ||| ' + utterance['text']
     return utterance['text']
 
-
+#assign a positive or negative score
 def sentiment_to_score(x):
     """ convert [-3:+3] score to a [1:5] rating """
     try:
