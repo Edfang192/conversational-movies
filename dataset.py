@@ -110,10 +110,10 @@ class MyDataset:
         self.process_dialogs()
 
     def load_data(self):
-        self.reviews = pd.read_table(os.path.join(self.datapath, 'reviews.tsv')).drop(['fresh'], axis=1).dropna()
+        self.reviews = pd.read_table(os.path.join(self.datapath, 'reviews.tsv.gz')).drop(['fresh'], axis=1).dropna()
         self.movie_ids = json.load(open(os.path.join(self.datapath, 'films_rt_ids.json'), 'r'))
         self.movies_features = json.load(open(os.path.join(self.datapath, 'films_features.json'), 'r'))
-        self.raw_dialogs = json.load(open(os.path.join(self.datapath, 'MovieSent.json'), 'r'))
+        self.raw_dialogs = json.load(open(os.path.join(self.datapath, 'merged_dataset.json'), 'r'))
 
     def process_dialogs(self) -> None:
         """
@@ -289,7 +289,7 @@ class MyDataset:
 
     ''' CF stuff '''
 
-    def train_cf(self) -> KNNBaseline | SVD | SVDpp:
+    def train_cf(self) -> KNNBaseline:
 
         cf_path = self.get_path(f'cf_{self.cf_type}.pkl')
         if not self.regenerate and os.path.exists(cf_path):
@@ -384,6 +384,7 @@ class MyDataset:
         pickle.dump(estimator, open(path, 'wb'))
 
         y_pred = estimator.predict(x_test)
+        
         self.logger.info('sentiment estimator results:')
         self.logger.info(f'RMSE: {math.sqrt(mse(y_test, y_pred)):.4f}')
         self.logger.info(f' MAE: {mae(y_test, y_pred):.4f}')
