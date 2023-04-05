@@ -65,9 +65,44 @@ def parse_args():
 
 
 if __name__ == '__main__':
+    '''
     args = parse_args()
     args.logger = get_logger()
     dataset = MyDataset(args)
     dataset.load_all_features()
+    model = MyModel(args)
+    model.fit(dataset)
+    '''
+    args = parse_args()
+    args.logger = get_logger(args)
+    dataset = MyDataset(args)
+    dataset.load_all_features()
+
+    # Train the NeuralMatrixFactorization baseline model
+    num_users = len(dataset.data['user_id'].unique())
+    num_items = len(dataset.data['movie_id'].unique())
+    num_factors = 20
+    hidden_units = [64, 32, 16, 8]
+    dropout_rate = 0.2
+    l2_reg = 1e-5
+    learning_rate = 0.001
+
+    nmf_model = NeuralMatrixFactorization(num_users, num_items, num_factors, hidden_units, dropout_rate, l2_reg, learning_rate)
+
+    # Prepare data for the NMF model (adjust the column names according to your dataset)
+    X_nmf = dataset.data[['user_id', 'movie_id']]
+    y_nmf = dataset.data['score']
+
+    X_train_nmf, X_test_nmf, y_train_nmf, y_test_nmf = tts(X_nmf, y_nmf, test_size=0.2, random_state=args.seed)
+
+    # Fit the NMF model
+    nmf_model.fit(X_train_nmf, y_train_nmf, batch_size=256, epochs=20, validation_split=0.1)
+
+    # Evaluate the NMF model
+    y_pred_nmf = nmf_model.predict(X_test_nmf)
+    args.logger.info(f'NMF RMSE: {math.sqrt(mse(y_test_nmf, y_pred_nmf)):.4f}')
+    args.logger.info(f'NMF MAE: {mae(y_test_nmf, y_pred_nmf):.4f}')
+
+    # Train and evaluate the existing model
     model = MyModel(args)
     model.fit(dataset)
