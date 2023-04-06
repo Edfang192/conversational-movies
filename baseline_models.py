@@ -33,6 +33,46 @@ class WideAndDeep(nn.Module):
         super().__init__()
         self.user_emb = nn.Embedding(n_users, emb_size)
         self.movie_emb = nn.Embedding(n_movies, emb_size)
+
+class MovieLensDataset(Dataset):
+    def __init__(self, data_dir, split='train', transform=None):
+        assert split in ['train', 'val', 'test'], "Invalid split. Must be one of ['train', 'val', 'test']"
+        self.split = split
+        self.transform = transform
+        
+        # Load data
+        if split == 'train':
+            ratings_file = os.path.join(data_dir, 'train_ratings.csv')
+        elif split == 'val':
+            ratings_file = os.path.join(data_dir, 'val_ratings.csv')
+        else:
+            ratings_file = os.path.join(data_dir, 'test_ratings.csv')
+            
+        self.ratings = pd.read_csv(ratings_file, usecols=['userId', 'movieId', 'rating'])
+        self.num_users = self.ratings['userId'].nunique()
+        self.num_items = self.ratings['movieId'].nunique()
+        
+        # Map user and item IDs to contiguous indices
+        self.user_mapping = dict(zip(self.ratings['userId'].unique(), range(self.num_users)))
+        self.item_mapping = dict(zip(self.ratings['movieId'].unique(), range(self.num_items)))
+        self.ratings['userId'] = self.ratings['userId'].apply(lambda x: self.user_mapping[x])
+        self.ratings['movieId'] = self.ratings['movieId'].apply(lambda x: self.item_mapping[x])
+        
+        # Convert dataframe to tensor
+        self.ratings = torch.tensor(self.ratings.to_numpy(), dtype=torch.long)
+        
+    def __len__(self):
+        return len(self.ratings)
+    
+    def __getitem__(self, index):
+        user_id = self.ratings[index, 0]
+        item_id = self.ratings[index, 1]
+        rating = self.ratings[index, 2]
+        
+        if self.transform:
+            user_id, item_id, rating = self.transform(user_id, item_id, rating)
+        
+        return user_id, item_id, rating
         self.genre_emb = nn.Embedding(n_genres, emb_size)
         self.movie_bias = nn.Embedding(n_movies, 1)
         self.fc1 = nn.Linear(emb_size * 3, hidden_size)
@@ -54,15 +94,6 @@ class WideAndDeep(nn.Module):
         return preds
 
 
-class MovieLensDataset(Dataset):
-    def __init__(self, ratings_file: str, sep: str = '\t'):
-        self.ratings = pd.read_csv(ratings_file, sep=sep, names=['user_id', 'movie_id', 'rating', 'timestamp'])
-        self.user_enc = {u: i for i, u in enumerate(self.ratings['user_id'].unique())}
-        self.movie_enc = {m: i for i, m in enumerate(self.ratings['movie_id'].unique())}
-        self.ratings['user_id'] = self.ratings['user_id'].map(self.user_enc)
-        self.ratings['movie_id'] = self.ratings['movie_id'].map(self.movie_enc)
 
-    def __len__(self):
-        return len(self.ratings)
 
 
