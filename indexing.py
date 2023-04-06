@@ -42,5 +42,5 @@ def load_index(path, data):
 
 if __name__ == '__main__':
 
-    df = pd.read_table('reviews.tsv.gz')
+    df = pd.read_table('/content/conversational-movies/indexing.py')
     create_index(df, index_name='data/index', schema=schema)
