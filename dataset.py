@@ -14,6 +14,8 @@ from sklearn.model_selection import train_test_split as tts
 from surprise import SVD, Dataset, KNNBaseline, Reader, SVDpp
 from tqdm import tqdm
 from tqdm.auto import tqdm as tqdm_pandas
+from surprise import NMF
+
 
 from indexing import load_index
 
@@ -289,26 +291,28 @@ class MyDataset:
 
     ''' CF stuff '''
 
-    def train_cf(self) -> KNNBaseline:
+    def train_cf(self) -> NMF:
+      cf_path = self.get_path(f'cf_{self.cf_type}.pkl')
+      if not self.regenerate and os.path.exists(cf_path):
+        return pickle.load(open(cf_path, 'rb'))
 
-        cf_path = self.get_path(f'cf_{self.cf_type}.pkl')
-        if not self.regenerate and os.path.exists(cf_path):
-            return pickle.load(open(cf_path, 'rb'))
+      reader = Reader(rating_scale=(1, 5))
+      self.logger.info(f'training {self.cf_type}')
+      if self.cf_type == 'knn':
+        cf_model = KNNBaseline(sim_options={'name': 'cosine', 'user_based': True}, verbose=False)
+      elif self.cf_type == 'svd':
+        cf_model = SVD(n_factors=500)
+      elif self.cf_type == 'svdpp':
+        cf_model = SVDpp(n_factors=500)
+      elif self.cf_type == 'nmf':  # Add this branch for NMF
+        cf_model = NMF(n_factors=15, n_epochs=50, random_state=42)
 
-        reader = Reader(rating_scale=(1, 5))
-        self.logger.info(f'training {self.cf_type}')
-        if self.cf_type == 'knn':
-            cf_model = KNNBaseline(sim_options={'name': 'cosine', 'user_based': True}, verbose=False)
-        elif self.cf_type == 'svd':
-            cf_model = SVD(n_factors=500)
-        elif self.cf_type == 'svdpp':
-            cf_model = SVDpp(n_factors=500)
+      data = self.convert_to_cf_matrix()
+      data_train = Dataset.load_from_df(data, reader)
+      cf_model.fit(data_train.build_full_trainset())
+      pickle.dump(cf_model, open(cf_path, 'wb'))
+      return cf_model
 
-        data = self.convert_to_cf_matrix()
-        data_train = Dataset.load_from_df(data, reader)
-        cf_model.fit(data_train.build_full_trainset())
-        pickle.dump(cf_model, open(cf_path, 'wb'))
-        return cf_model
 
     def convert_to_cf_matrix(self):
         ''' converts df_users into a standard records cf matrix '''
