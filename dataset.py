@@ -290,7 +290,7 @@ class MyDataset:
         return os.path.join(self.outpath, file)
 
     ''' CF stuff '''
-
+#This is our contribution
     def train_cf(self) -> NMF:
       cf_path = self.get_path(f'cf_{self.cf_type}.pkl')
       if not self.regenerate and os.path.exists(cf_path):
@@ -304,7 +304,7 @@ class MyDataset:
         cf_model = SVD(n_factors=500)
       elif self.cf_type == 'svdpp':
         cf_model = SVDpp(n_factors=500)
-      elif self.cf_type == 'nmf':  # Add this branch for NMF
+      elif self.cf_type == 'nmf':  # THis is our contribution
         cf_model = NMF(n_factors=15, n_epochs=50, random_state=42)
 
       data = self.convert_to_cf_matrix()
